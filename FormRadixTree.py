@@ -1,7 +1,9 @@
 import radix
 import urllib.request
-from datetime import date
+from datetime import date, timedelta
 import gzip
+import json
+import pickle
 
 class FormRadixTree():
     def FetchData(self):
@@ -42,10 +44,58 @@ class FormRadixTree():
         
         return prefixes
 
-    def IsVisible(self):
+    def IsVisible(self, prefix):
+        MAX_TIMEDIFF_THRESHOLD_DECIDE_VISIBLE = timedelta(days=1)
 
-    def FormTree(self):
+        try:
+            ripeUrl = 'https://stat.ripe.net/data/routing-status/data.json?resource={}'.format(prefix)
+            req = urllib.request.Request(ripeUrl)
+            response = urllib.request.urlopen(req)
+            data = json.loads(response.read())
+            lastSeen = data['data']['last_seen']['time']
+            [ year, month, day ] = lastSeen.split('-')
+            day = day.split('T')[0] 
+            lastSeenDate = date(int(year), int(month), int(day))
+            today = date.today()
 
-        rtree = 
+            diff = today - lastSeenDate
+        except Exception as e:
+            print(e)
+            raise Exception('Error while handling visibility check')
 
-    # def get(self):
+        if (diff <= MAX_TIMEDIFF_THRESHOLD_DECIDE_VISIBLE):
+            return {'visibility': True, 'last_seen': lastSeenDate}
+
+        return {'visibility': False, 'last_seen': lastSeenDate}
+
+
+    def FormTree(self, prefixes):
+        filePath = './data/' + str(date.today())
+
+        rtree = radix.Radix()
+        i = 0
+        for prefix in prefixes[:10]:
+            i += 1
+            rnode = rtree.add(prefix)
+            rnode.data['visibility'] = None
+            rnode.data['last_seen'] = None
+            rnodeParent = rtree.search_worst(prefix)
+            if (rnodeParent.data['visibility'] == False):
+                rnode.data['visibility'] = False
+            else:
+                visibility = self.IsVisible(prefix)
+                rnode.data['visibility'] = visibility['visibility']
+                rnode.data['last_seen'] = visibility['last_seen']
+            if (i % 50 == 0):
+                print("Processed " + str(i) + " prefixes, saving intermediate data.")
+                f = open(filePath, 'wb+')
+                pickle.dump(rtree, f)
+                f.close()
+
+        return rtree
+
+    def get(self):
+        prefixes = self.FetchData()
+        rtree = self.FormTree(prefixes)
+
+        return rtree
