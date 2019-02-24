@@ -1,21 +1,23 @@
-from flask import Flask, request
+from flask import Flask, request, render_template
 
 from FormRadixTree import FormRadixTree
 from FormTable import FormTable
 
-app = Flask(__name__, static_url_path='./static')
+app = Flask(__name__)
 
-@app.route('/', methods=['GET'])
-def Root(): # TODO: Serve statics
-    app.send_static_file('index.html')
-    app.send_static_file('index.js')
-    
-    return
+@app.route('/static/<path:path>', endpoint='serveStatic')
+def serveStatic(path):
+    print(path)
+    return url_for('static', filename=path)
 
-
-@app.route('/api/v1/unused') #TODO: handle GET method with queryString parameter 'duration'
+@app.route('/api/v1/unused', endpoint='UnusedResources') 
 def UnusedResources():
     rtree = FormRadixTree().get()
-    response = FormTable.getJson(rtree)
+    # response = FormTable().getJson()
+    response = FormTable().getJsonFromTree()
 
     return response
+
+@app.route('/')
+def Root(): 
+    return render_template('index.html', name=None)

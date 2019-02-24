@@ -30,7 +30,6 @@ class FormRadixTree():
         header = data[0:6]
         body = data[7:]
         prefixes = []        
-        print(body[0].split(' '))
         for line in body:
             tmp = line.split(' ')
             if len(tmp) < 2:
@@ -41,6 +40,7 @@ class FormRadixTree():
             tmp = tmp[1]
             if '/' in tmp:
                 prefixes.append(tmp)
+        print("Fetched {} numbers of prefixes, proccessing start".format(len(prefixes)))
         
         return prefixes
 
@@ -74,7 +74,7 @@ class FormRadixTree():
 
         rtree = radix.Radix()
         i = 0
-        for prefix in prefixes[:10]:
+        for prefix in prefixes[:1000]:
             i += 1
             rnode = rtree.add(prefix)
             rnode.data['visibility'] = None
@@ -82,15 +82,19 @@ class FormRadixTree():
             rnodeParent = rtree.search_worst(prefix)
             if (rnodeParent.data['visibility'] == False):
                 rnode.data['visibility'] = False
+                print("Handling {}th prefix, Parent is already not visible".format(i))
             else:
                 visibility = self.IsVisible(prefix)
                 rnode.data['visibility'] = visibility['visibility']
                 rnode.data['last_seen'] = visibility['last_seen']
-            if (i % 50 == 0):
+                print("Handling {}th prefix, visibility: {}, last seen: {}".format(i, visibility['visibility'], visibility['last_seen']))
+            if (i % 100 == 0):
                 print("Processed " + str(i) + " prefixes, saving intermediate data.")
                 f = open(filePath, 'wb+')
                 pickle.dump(rtree, f)
                 f.close()
+        print("Processed " + str(i) + " prefixes, saving intermediate data.")
+        
 
         return rtree
 
